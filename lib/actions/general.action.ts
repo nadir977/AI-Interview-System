@@ -83,37 +83,36 @@ export async function getFeedbackByInterviewId(
   return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
 
-export async function getLatestInterviews(userId: string, limit: number = 10) {
-  const parsedLimit = Number(limit);
-
-  if (isNaN(parsedLimit)) {
-    throw new Error("Invalid limit value (must be a number).");
-  }
-
+export async function getLatestInterviews(userId: string, limit = 20) {
   const interviews = await db
     .collection("interviews")
-    .where("userId", "!=", userId)
-    .limit(parsedLimit)   // ⭐ FIX
+    .where("finalized", "==", true)
+    .orderBy("createdAt", "desc")
+    .limit(limit)
     .get();
 
-  return interviews.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+ return interviews.docs
+  .map((doc) => {
+    const data = doc.data() as Omit<Interview, "id">; // tell TS exact fields
+    return { id: doc.id, ...data };
+  })
+  .filter((item) => item.userId !== userId) as Interview[];
+
 }
 
 
-export async function getInterviewsByUserId(
-  userId: string
-): Promise<Interview[] | null> {
+
+
+export async function getInterviewsByUserId(userId: string) {
   const interviews = await db
     .collection("interviews")
     .where("userId", "==", userId)
     .orderBy("createdAt", "desc")
     .get();
 
-  return interviews.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Interview[];
+ return interviews.docs.map((doc) => {
+  const data = doc.data() as Omit<Interview, "id">;
+  return { id: doc.id, ...data };
+}) as Interview[];
+
 }
